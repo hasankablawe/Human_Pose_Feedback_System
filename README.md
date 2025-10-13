@@ -73,6 +73,6 @@ PoseForm-AI/
 ### 1. Clone the Repository
 
 ```bash
-git clone [[https://github.com/your-username/PoseForm-AI.git](https://github.com/your-username/PoseForm-AI.git)](https://github.com/hasankablawe/PoseForm-AI)
+git clone https://github.com/hasankablawe/PoseForm-AI
 cd PoseForm-AI
 ```
