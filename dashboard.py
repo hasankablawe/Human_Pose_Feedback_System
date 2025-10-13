@@ -2,6 +2,7 @@ import streamlit as st
 import cv2
 import numpy as np
 import pygame
+import time # NEW: Import the time module
 from pose_detector import pose_detector
 from exercise_correctors import BicepCurlCorrector, SquatCorrector, TricepExtensionCorrector, PushUpCorrector
 
@@ -32,8 +33,12 @@ run = st.sidebar.button('Start Webcam')
 st.title("PoseForm AI: Workout Corrector")
 frame_placeholder = st.empty()
 
-# Create a single placeholder for the stats area
-stats_placeholder = st.empty()
+# --- CREATE PLACEHOLDERS FOR STATS UNDER THE VIDEO ---
+col1, col2 = st.columns(2)
+with col1:
+    left_stats_placeholder = st.empty()
+with col2:
+    right_stats_placeholder = st.empty()
 
 
 if run:
@@ -41,6 +46,26 @@ if run:
     if not cap.isOpened():
         st.error("Error: Could not open webcam.")
     else:
+        # --- NEW: COUNTDOWN LOGIC ---
+        st.info("Get in position! Starting in 5 seconds...")
+        for i in range(5, 0, -1):
+            is_frame, frame = cap.read()
+            if not is_frame:
+                break
+            frame = cv2.flip(frame, 1)
+            
+            # Display countdown on the frame
+            h, w, _ = frame.shape
+            text = str(i)
+            text_size, _ = cv2.getTextSize(text, cv2.FONT_HERSHEY_SIMPLEX, 5, 10)
+            text_x = (w - text_size[0]) // 2
+            text_y = (h + text_size[1]) // 2
+            cv2.putText(frame, text, (text_x, text_y), cv2.FONT_HERSHEY_SIMPLEX, 5, (0, 255, 0), 10, cv2.LINE_AA)
+            
+            frame_placeholder.image(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB), channels="RGB")
+            time.sleep(1)
+        # --- END NEW ---
+        
         # --- INITIALIZE CORRECTOR ---
         exercise_corrector = EXERCISE_MAP[selected_exercise]()
         detector = pose_detector()
@@ -64,36 +89,23 @@ if run:
             if sound_to_play == 'rep' and rep_sound:
                 rep_sound.play()
 
-            # --- DISPLAY STATS UNDER THE VIDEO (HORIZONTAL LAYOUT) ---
-            # Use a container within the placeholder to redraw stats each frame
-            with stats_placeholder.container():
-                if isinstance(exercise_corrector, (BicepCurlCorrector, TricepExtensionCorrector)):
-                    # Create two columns for left and right arm stats
-                    col1, col2 = st.columns(2)
-                    with col1:
-                        st.markdown("### Left Arm")
-                        st.markdown(f'**Reps:** <h1 style="color: white;">{exercise_corrector.rep_counter_left}</h1>', unsafe_allow_html=True)
-                        st.markdown(f'**Stage:** <h3 style="color: cyan;">{exercise_corrector.stage_left.upper()}</h3>', unsafe_allow_html=True)
-                        st.info(f'Feedback: {exercise_corrector.feedback_left}')
+            # --- DISPLAY STATS UNDER THE VIDEO ---
+            if isinstance(exercise_corrector, (BicepCurlCorrector, TricepExtensionCorrector)):
+                with left_stats_placeholder.container():
+                    st.markdown("### Left Arm")
+                    st.markdown(f'**Reps:** <h1 style="color: white;">{exercise_corrector.rep_counter_left}</h1>', unsafe_allow_html=True)
+                    st.info(f'Feedback: {exercise_corrector.feedback_left}')
 
-                    with col2:
-                        st.markdown("### Right Arm")
-                        st.markdown(f'**Reps:** <h1 style="color: white;">{exercise_corrector.rep_counter_right}</h1>', unsafe_allow_html=True)
-                        st.markdown(f'**Stage:** <h3 style="color: cyan;">{exercise_corrector.stage_right.upper()}</h3>', unsafe_allow_html=True)
-                        st.info(f'Feedback: {exercise_corrector.feedback_right}')
+                with right_stats_placeholder.container():
+                    st.markdown("### Right Arm")
+                    st.markdown(f'**Reps:** <h1 style="color: white;">{exercise_corrector.rep_counter_right}</h1>', unsafe_allow_html=True)
+                    st.info(f'Feedback: {exercise_corrector.feedback_right}')
 
-                else: # For single metric exercises like Squat and Push-Up
-                    # Create three columns for reps, stage, and feedback
-                    col1, col2, col3 = st.columns(3)
-                    with col1:
-                        st.markdown('**Reps**')
-                        st.markdown(f'<h1 style="color: white;">{exercise_corrector.rep_counter}</h1>', unsafe_allow_html=True)
-                    with col2:
-                        st.markdown('**Stage**')
-                        st.markdown(f'<h3 style="color: cyan;">{exercise_corrector.stage.upper()}</h3>', unsafe_allow_html=True)
-                    with col3:
-                        st.markdown('**Feedback**')
-                        st.info(f'{exercise_corrector.feedback}')
+            else: # For single metric exercises
+                with left_stats_placeholder.container():
+                    st.markdown(f'**Reps:** <h1 style="color: white;">{exercise_corrector.rep_counter}</h1>', unsafe_allow_html=True)
+                    st.info(f'Feedback: {exercise_corrector.feedback}')
+                right_stats_placeholder.empty()
             
             # Display the video frame
             frame_placeholder.image(cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB), channels="RGB")
