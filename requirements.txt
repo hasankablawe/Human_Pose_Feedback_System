@@ -1,0 +1,7 @@
+numpy<2.0
+mediapipe==0.10.9
+opencv-python==4.8.1.78  # This version works with numpy 1.x
+protobuf<5.0
+streamlit
+pygame
+
